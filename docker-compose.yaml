@@ -1,0 +1,10 @@
+services:
+  goatcounter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - type: bind
+        source: ${GC_DB_PATH:-./db}
+        target: /app/db
+    restart: unless-stopped
