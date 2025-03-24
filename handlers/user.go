@@ -1,7 +1,3 @@
-// Copyright © Martin Tournoij – This file is part of GoatCounter and published
-// under the terms of a slightly modified EUPL v1.2 license, which can be found
-// in the LICENSE file or at https://license.goatcounter.com
-
 package handlers
 
 import (
@@ -17,6 +13,7 @@ import (
 
 	"code.soquee.net/otp"
 	"github.com/go-chi/chi/v5"
+	"github.com/sethvargo/go-limiter"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/xsrftoken"
 	"zgo.at/bgrun"
@@ -26,7 +23,6 @@ import (
 	"zgo.at/zdb"
 	"zgo.at/zhttp"
 	"zgo.at/zhttp/auth"
-	"zgo.at/zhttp/mware"
 	"zgo.at/zlog"
 	"zgo.at/zvalidate"
 )
@@ -40,16 +36,14 @@ var testTOTP = false
 
 type user struct{}
 
-func (h user) mount(r chi.Router) {
+func (h user) mount(r chi.Router, ratelimits Ratelimits) {
 	r.Get("/user/new", zhttp.Wrap(h.login))
 	r.Get("/user/forgot", zhttp.Wrap(h.forgot))
 	r.Post("/user/request-reset", zhttp.Wrap(h.requestReset))
 
 	// Rate limit login attempts.
-	rate := r.With(mware.Ratelimit(mware.RatelimitOptions{
-		Client: mware.RatelimitIP,
-		Store:  mware.NewRatelimitMemory(),
-		Limit:  rateLimits.login,
+	rate := r.With(Ratelimit(false, func(*http.Request) (limiter.Store, string) {
+		return ratelimits.Login, ""
 	}))
 	rate.Post("/user/requestlogin", zhttp.Wrap(h.requestLogin))
 	r.Get("/user/requestlogin", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -533,7 +527,7 @@ func (h user) verify(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	zhttp.Flash(w, "%q verified", user.Email)
+	zhttp.Flash(w, fmt.Sprintf("%q verified", user.Email))
 	return zhttp.SeeOther(w, "/")
 }
 

@@ -1,7 +1,3 @@
-// Copyright © Martin Tournoij – This file is part of GoatCounter and published
-// under the terms of a slightly modified EUPL v1.2 license, which can be found
-// in the LICENSE file or at https://license.goatcounter.com
-
 package handlers
 
 import (
@@ -59,7 +55,7 @@ func (h website) Mount(r chi.Router, db zdb.DB, dev bool) {
 		mware.WrapWriter(),
 		mware.Headers(nil))
 	if dev {
-		mware.RequestLog(nil)
+		mware.RequestLog(nil, nil)
 	}
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
@@ -469,7 +465,7 @@ func (h website) doForgot(w http.ResponseWriter, r *http.Request) error {
 		}
 	})
 
-	zhttp.Flash(w, "List of login URLs mailed to %s", args.Email)
+	zhttp.Flash(w, fmt.Sprintf("List of login URLs mailed to %s", args.Email))
 	return zhttp.SeeOther(w, "/user/forgot")
 }
 

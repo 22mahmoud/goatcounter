@@ -1,7 +1,3 @@
-// Copyright © Martin Tournoij – This file is part of GoatCounter and published
-// under the terms of a slightly modified EUPL v1.2 license, which can be found
-// in the LICENSE file or at https://license.goatcounter.com
-
 package handlers
 
 import (
@@ -418,14 +414,14 @@ func getPeriod(w http.ResponseWriter, r *http.Request, site *goatcounter.Site, u
 		var err error
 		rng.Start, err = time.ParseInLocation("2006-01-02", d, user.Settings.Timezone.Loc())
 		if err != nil {
-			return rng, guru.Errorf(400, T(r.Context(), "error/invalid-start-date|Invalid start date: %(date)", d))
+			return rng, guru.New(400, T(r.Context(), "error/invalid-start-date|Invalid start date: %(date)", d))
 		}
 	}
 	if d := r.URL.Query().Get("period-end"); d != "" {
 		var err error
 		rng.End, err = time.ParseInLocation("2006-01-02 15:04:05", d+" 23:59:59", user.Settings.Timezone.Loc())
 		if err != nil {
-			return rng, guru.Errorf(400, T(r.Context(), "error/invalid-end-date|Invalid end date: %(date)", d))
+			return rng, guru.New(400, T(r.Context(), "error/invalid-end-date|Invalid end date: %(date)", d))
 		}
 	}
 

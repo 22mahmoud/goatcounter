@@ -1,7 +1,3 @@
-// Copyright © Martin Tournoij – This file is part of GoatCounter and published
-// under the terms of a slightly modified EUPL v1.2 license, which can be found
-// in the LICENSE file or at https://license.goatcounter.com
-
 package main
 
 import (
@@ -40,7 +36,7 @@ func cmdSaas(f zli.Flags, ready chan<- struct{}, stop chan struct{}) error {
 	var (
 		domain = f.String("goatcounter.localhost:8081,static.goatcounter.localhost:8081", "domain").Pointer()
 	)
-	dbConnect, dbConn, dev, automigrate, listen, flagTLS, from, websocket, apiMax, err := flagsServe(f, &v)
+	dbConnect, dbConn, dev, automigrate, listen, flagTLS, from, websocket, apiMax, ratelimits, err := flagsServe(f, &v)
 	if err != nil {
 		return err
 	}
@@ -80,7 +76,7 @@ func cmdSaas(f zli.Flags, ready chan<- struct{}, stop chan struct{}) error {
 		hosts := map[string]http.Handler{
 			d:          zhttp.RedirectHost("//www." + domain),
 			"www." + d: handlers.NewWebsite(db, dev),
-			"*":        handlers.NewBackend(db, acmeh, dev, c.GoatcounterCom, websocket, c.DomainStatic, c.BasePath, 15, apiMax),
+			"*":        handlers.NewBackend(db, acmeh, dev, c.GoatcounterCom, websocket, c.DomainStatic, c.BasePath, 15, apiMax, ratelimits),
 		}
 		if dev {
 			hosts[znet.RemovePort(domainStatic)] = handlers.NewStatic(chi.NewRouter(), dev, true, c.BasePath)

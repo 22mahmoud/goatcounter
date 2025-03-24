@@ -1,10 +1,7 @@
-// Copyright © Martin Tournoij – This file is part of GoatCounter and published
-// under the terms of a slightly modified EUPL v1.2 license, which can be found
-// in the LICENSE file or at https://license.goatcounter.com
-
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -29,7 +26,7 @@ import (
 type bosmang struct{}
 
 func (h bosmang) mount(r chi.Router, db zdb.DB) {
-	a := r.With(mware.RequestLog(nil), requireAccess(goatcounter.AccessSuperuser))
+	a := r.With(mware.RequestLog(nil, nil), requireAccess(goatcounter.AccessSuperuser))
 
 	r.Get("/bosmang", zhttp.Wrap(func(w http.ResponseWriter, r *http.Request) error {
 		return zhttp.MovedPermanently(w, "/settings/server")
@@ -97,7 +94,7 @@ func (h bosmang) runTask(w http.ResponseWriter, r *http.Request) error {
 		}
 	})
 
-	zhttp.Flash(w, "Task %q started", id)
+	zhttp.Flash(w, fmt.Sprintf("Task %q started", id))
 	return zhttp.SeeOther(w, "/bosmang/bgrun")
 }
 

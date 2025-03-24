@@ -1,7 +1,3 @@
-// Copyright © Martin Tournoij – This file is part of GoatCounter and published
-// under the terms of a slightly modified EUPL v1.2 license, which can be found
-// in the LICENSE file or at https://license.goatcounter.com
-
 package handlers
 
 import (
@@ -47,7 +43,7 @@ func (h i18n) mount(r chi.Router) {
 	r.Post("/i18n/set/{file}", zhttp.Wrap(h.set))
 	r.Post("/i18n/submit/{file}", zhttp.Wrap(h.submit))
 
-	a := r.With(mware.RequestLog(nil), requireAccess(goatcounter.AccessSuperuser))
+	a := r.With(mware.RequestLog(nil, nil), requireAccess(goatcounter.AccessSuperuser))
 	a.Get("/i18n/manage", zhttp.Wrap(h.manage))
 }
 
@@ -186,7 +182,7 @@ func (h i18n) new(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	zhttp.Flash(w, "%q added", args.Language)
+	zhttp.Flash(w, fmt.Sprintf("%q added", args.Language))
 	return zhttp.SeeOther(w, "/i18n")
 }
 
@@ -265,7 +261,7 @@ func (h i18n) set(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	zhttp.Flash(w, "language set to %q", lang)
+	zhttp.Flash(w, fmt.Sprintf("language set to %q", lang))
 	return zhttp.SeeOther(w, "/i18n")
 }
 

@@ -1,7 +1,3 @@
-// Copyright © Martin Tournoij – This file is part of GoatCounter and published
-// under the terms of a slightly modified EUPL v1.2 license, which can be found
-// in the LICENSE file or at https://license.goatcounter.com
-
 package handlers
 
 import (
@@ -109,6 +105,10 @@ func (h vcounter) counter(w http.ResponseWriter, r *http.Request) error {
 		style      = r.URL.Query().Get("style")
 	)
 
+	if ext == "json" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+	}
+
 	var (
 		rng ztime.Range
 		err error
@@ -126,13 +126,13 @@ func (h vcounter) counter(w http.ResponseWriter, r *http.Request) error {
 			rng.Start, err = time.Parse("2006-01-02", startArg)
 		}
 		if err != nil {
-			return err
+			return guru.WithCode(400, err)
 		}
 	}
 	if s := r.URL.Query().Get("end"); s != "" {
 		rng.End, err = time.Parse("2006-01-02", s)
 		if err != nil {
-			return err
+			return guru.WithCode(400, err)
 		}
 	}
 
@@ -154,7 +154,6 @@ func (h vcounter) counter(w http.ResponseWriter, r *http.Request) error {
 	default:
 		return guru.Errorf(400, "unknown extension: %q", ext)
 	case "json":
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 		return zhttp.JSON(w, map[string]string{
 			"count_unique": count,
 			"count":        count,

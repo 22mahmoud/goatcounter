@@ -1,7 +1,3 @@
-// Copyright © Martin Tournoij – This file is part of GoatCounter and published
-// under the terms of a slightly modified EUPL v1.2 license, which can be found
-// in the LICENSE file or at https://license.goatcounter.com
-
 package main
 
 import (
@@ -173,7 +169,7 @@ func cmdServe(f zli.Flags, ready chan<- struct{}, stop chan struct{}) error {
 		basePath     = f.String("/", "base-path").Pointer()
 		domainStatic = f.String("", "static").Pointer()
 	)
-	dbConnect, dbConn, dev, automigrate, listen, flagTLS, from, websocket, apiMax, err := flagsServe(f, &v)
+	dbConnect, dbConn, dev, automigrate, listen, flagTLS, from, websocket, apiMax, ratelimits, err := flagsServe(f, &v)
 	if err != nil {
 		return err
 	}
@@ -227,7 +223,7 @@ func cmdServe(f zli.Flags, ready chan<- struct{}, stop chan struct{}) error {
 
 		// Set up HTTP handler and servers.
 		hosts := map[string]http.Handler{
-			"*": handlers.NewBackend(db, acmeh, dev, c.GoatcounterCom, websocket, c.DomainStatic, c.BasePath, 60, apiMax),
+			"*": handlers.NewBackend(db, acmeh, dev, c.GoatcounterCom, websocket, c.DomainStatic, c.BasePath, 60, apiMax, ratelimits),
 		}
 		if domainStatic != "" {
 			// May not be needed, but just in case the DomainStatic isn't an
@@ -321,7 +317,7 @@ func doServe(ctx context.Context, db zdb.DB,
 
 const defaultDB = "sqlite+db/goatcounter.sqlite3"
 
-func flagsServe(f zli.Flags, v *zvalidate.Validator) (string, string, bool, bool, string, string, string, bool, int, error) {
+func flagsServe(f zli.Flags, v *zvalidate.Validator) (string, string, bool, bool, string, string, string, bool, int, handlers.Ratelimits, error) {
 	var (
 		dbConnect   = f.String(defaultDB, "db").Pointer()
 		dbConn      = f.String("16,4", "dbconn").Pointer()
@@ -362,6 +358,7 @@ func flagsServe(f zli.Flags, v *zvalidate.Validator) (string, string, bool, bool
 
 	goatcounter.InitGeoDB(*geodb)
 
+	ratelimits := handlers.NewRatelimits()
 	if *ratelimit != "" {
 		for _, r := range strings.Split(*ratelimit, ",") {
 			name, spec, _ := strings.Cut(r, ":")
@@ -371,19 +368,19 @@ func flagsServe(f zli.Flags, v *zvalidate.Validator) (string, string, bool, bool
 			v.Required("name", name)
 			v.Required("requests", reqs)
 			v.Required("seconds", secs)
-			name = v.Include("name", name, []string{"count", "api", "api-count", "export", "login"})
+			nn := v.Include("name", name, []string{"count", "api", "api-count", "export", "login"})
+			name = nn.(string)
 			r := v.Integer("requests", reqs)
 			s := v.Integer("seconds", secs)
 			if v.HasErrors() {
-				return *dbConnect, *dbConn, *dev, *automigrate, *listen, *flagTLS, *from, *websocket, *apiMax,
+				return *dbConnect, *dbConn, *dev, *automigrate, *listen, *flagTLS, *from, *websocket, *apiMax, handlers.Ratelimits{},
 					fmt.Errorf("invalid -ratelimit flag: %q: %w", *ratelimit, v)
 			}
-
-			handlers.SetRateLimit(name, int(r), s)
+			ratelimits.Set(name, int(r), s)
 		}
 	}
 
-	return *dbConnect, *dbConn, *dev, *automigrate, *listen, *flagTLS, *from, *websocket, *apiMax, err
+	return *dbConnect, *dbConn, *dev, *automigrate, *listen, *flagTLS, *from, *websocket, *apiMax, ratelimits, err
 }
 
 func setupServe(dbConnect, dbConn string, dev bool, flagTLS string, automigrate bool) (zdb.DB, context.Context, *tls.Config, http.HandlerFunc, uint8, error) {
